@@ -52,7 +52,8 @@ def main():
 
 
 def get_api_key():
-    with open('api_data.csv', mode='r', encoding='utf-8') as file:
+    with open('api_data.csv', mode='r',
+              encoding='utf-8') as file:  # необходимо создать файл api_data.csv с 1-ой строкой: geocode_api_key;static_api_key
         data = file.readlines()[1].split(';')
 
     return data
