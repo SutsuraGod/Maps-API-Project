@@ -1,6 +1,6 @@
 import sys
 import requests
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtGui import QPixmap, QKeySequence, QShortcut
 from MainWindow import Ui_MainWindow as main_window_ui
 from PyQt6.QtWidgets import QApplication, QMainWindow
 import os
@@ -15,13 +15,23 @@ class MainWindow(QMainWindow, main_window_ui):
 
         self.searchButton.clicked.connect(self.search)
 
+        self.zoom_plus_shortcut = QShortcut(QKeySequence('PgUp'), self)
+        self.zoom_plus_shortcut.activated.connect(lambda: self.zoom(True))
+
+        self.zoom_minus_shortcut = QShortcut(QKeySequence('PgDown'), self)
+        self.zoom_minus_shortcut.activated.connect(lambda: self.zoom(False))
+
     def search(self):
         lon = self.lonEdit.text()
         lat = self.latEdit.text()
         delta = self.deltaEdit.text()
-        self.get_image(lon, lat, delta)
-        self.pixmap = QPixmap(self.map_file)
-        self.MapLabel.setPixmap(self.pixmap)
+        if delta.strip() and lon.strip() and lat.strip() and 0.01 <= float(delta) <= 3:
+            self.statusbar.clearMessage()
+            self.get_image(lon, lat, delta)
+            self.pixmap = QPixmap(self.map_file)
+            self.MapLabel.setPixmap(self.pixmap)
+        else:
+            self.statusbar.showMessage('Введены некорректные данные')
 
     def get_image(self, lon, lat, delta):
         params = {
@@ -40,6 +50,17 @@ class MainWindow(QMainWindow, main_window_ui):
             print(f'Ошибка: {response.status_code}')
             sys.exit(1)
 
+    def zoom(self, fg):
+        cur_delta = float(self.deltaEdit.text())
+        step = 0.5
+        if fg:
+            if cur_delta - step >= 0.01:
+                self.deltaEdit.setText(f'{round(cur_delta - step, 2)}')
+        else:
+            if cur_delta + step <= 3:
+                self.deltaEdit.setText(f'{round(cur_delta + step, 2)}')
+        self.search()
+
     def closeEvent(self, event):
         os.remove(self.map_file)
 
@@ -48,6 +69,7 @@ def main():
     app = QApplication(sys.argv)
     mw = MainWindow()
     mw.show()
+    sys.excepthook = except_hook
     sys.exit(app.exec())
 
 
@@ -57,6 +79,10 @@ def get_api_key():
         data = file.readlines()[1].split(';')
 
     return data
+
+
+def except_hook(cls, exception, traceback):
+    sys.__excepthook__(cls, exception, traceback)
 
 
 if __name__ == "__main__":
