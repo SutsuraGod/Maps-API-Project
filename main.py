@@ -22,12 +22,25 @@ class MainWindow(QMainWindow, main_window_ui):
         self.zoom_minus_shortcut = QShortcut(QKeySequence('PgDown'), self)
         self.zoom_minus_shortcut.activated.connect(lambda: self.zoom(False))
 
+        self.up = QShortcut(QKeySequence('Up'), self)
+        self.up.activated.connect(lambda: self.movement('up'))
+
+        self.down = QShortcut(QKeySequence('Down'), self)
+        self.down.activated.connect(lambda: self.movement('down'))
+
+        self.left = QShortcut(QKeySequence('Left'), self)
+        self.left.activated.connect(lambda: self.movement('left'))
+
+        self.right = QShortcut(QKeySequence('Right'), self)
+        self.right.activated.connect(lambda: self.movement('right'))
+
     def search(self):
         '''Поиск и вывод объекта по введенным данным'''
         lon = self.lonEdit.text()
         lat = self.latEdit.text()
         delta = self.deltaEdit.text()
-        if delta.strip() and lon.strip() and lat.strip() and 0.01 <= float(delta) <= 3:  # проверка введенных данных
+        if delta.strip() and lon.strip() and lat.strip() and 0.01 <= float(
+                delta) <= 3 and -180 < float(lon) < 180 and -85 < float(lat) < 85:  # проверка введенных данных
             self.statusbar.clearMessage()
             self.get_image(lon, lat, delta)
             self.pixmap = QPixmap(self.map_file)
@@ -64,6 +77,34 @@ class MainWindow(QMainWindow, main_window_ui):
         else:
             if cur_delta + step <= 3:
                 self.deltaEdit.setText(f'{round(cur_delta + step, 2)}')
+        self.search()
+
+    def movement(self, direction):
+        '''Изменение положения карты при нажатии на клавиши стрелок'''
+        lon = float(self.lonEdit.text())
+        lat = float(self.latEdit.text())
+        delta = float(self.deltaEdit.text())
+        step = 0.25 * delta  # шаг равен 25% от текущего масштаба
+        if direction == 'up':
+            lat += step
+        elif direction == 'down':
+            lat -= step
+        elif direction == 'right':
+            if lon + step > 180:
+                lon = -180 + (lon + step) % 180
+            elif lon + step == 180:
+                lon = -179
+            else:
+                lon += step
+        elif direction == 'left':
+            if lon - step < -180:
+                lon = 180 - (lon + step) % 180
+            elif lon - step == -180:
+                lon = 179
+            else:
+                lon -= step
+        self.latEdit.setText(str(lat))
+        self.lonEdit.setText(str(lon))
         self.search()
 
     def closeEvent(self, event):
