@@ -15,6 +15,7 @@ class MainWindow(QMainWindow, main_window_ui):
 
         self.searchButton.clicked.connect(self.search)
 
+        # создание горячих клавиш
         self.zoom_plus_shortcut = QShortcut(QKeySequence('PgUp'), self)
         self.zoom_plus_shortcut.activated.connect(lambda: self.zoom(True))
 
@@ -22,10 +23,11 @@ class MainWindow(QMainWindow, main_window_ui):
         self.zoom_minus_shortcut.activated.connect(lambda: self.zoom(False))
 
     def search(self):
+        '''Поиск и вывод объекта по введенным данным'''
         lon = self.lonEdit.text()
         lat = self.latEdit.text()
         delta = self.deltaEdit.text()
-        if delta.strip() and lon.strip() and lat.strip() and 0.01 <= float(delta) <= 3:
+        if delta.strip() and lon.strip() and lat.strip() and 0.01 <= float(delta) <= 3:  # проверка введенных данных
             self.statusbar.clearMessage()
             self.get_image(lon, lat, delta)
             self.pixmap = QPixmap(self.map_file)
@@ -34,25 +36,28 @@ class MainWindow(QMainWindow, main_window_ui):
             self.statusbar.showMessage('Введены некорректные данные')
 
     def get_image(self, lon, lat, delta):
+        '''Создание и выполнение запроса для получения карты'''
         params = {
             'apikey': STATIC_API_KEY,
             'll': f'{lon},{lat}',
             'spn': f'{delta},{delta}'
         }
-
+        # запрос на получение картинки по введенным данным
         response = requests.get(STATIC_API_SERVER, params)
 
         if response.status_code == 200:
+            # сохранение карты на компьютер при успешном выполнении запроса
             self.map_file = 'map.png'
             with open(self.map_file, 'wb') as file:
                 file.write(response.content)
-        else:
+        else:  # обработка ошибки при попытке выполнения запроса
             print(f'Ошибка: {response.status_code}')
             sys.exit(1)
 
     def zoom(self, fg):
+        '''Изменение масштаба карты при использовании горячих клавиш'''
         cur_delta = float(self.deltaEdit.text())
-        step = 0.5
+        step = 0.5  # шаг изменения масштаба
         if fg:
             if cur_delta - step >= 0.01:
                 self.deltaEdit.setText(f'{round(cur_delta - step, 2)}')
@@ -62,7 +67,7 @@ class MainWindow(QMainWindow, main_window_ui):
         self.search()
 
     def closeEvent(self, event):
-        os.remove(self.map_file)
+        os.remove(self.map_file)  # удаления сохранившейся карты с компьютера при завершении работы программы
 
 
 def main():
@@ -74,6 +79,7 @@ def main():
 
 
 def get_api_key():
+    '''Получение API ключей из файла api_data.csv'''
     with open('api_data.csv', mode='r',
               encoding='utf-8') as file:  # необходимо создать файл api_data.csv с 1-ой строкой: geocode_api_key;static_api_key
         data = file.readlines()[1].split(';')
