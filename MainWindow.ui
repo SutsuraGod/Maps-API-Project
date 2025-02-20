@@ -67,6 +67,13 @@
       </layout>
      </item>
      <item>
+      <widget class="QCheckBox" name="themeCheckBox">
+       <property name="text">
+        <string>Черная тема</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="searchButton">
        <property name="text">
         <string>Найти</string>
