@@ -1,18 +1,22 @@
 import sys
 import requests
 from PyQt6.QtGui import QPixmap, QKeySequence, QShortcut
-from MainWindow import Ui_MainWindow as main_window_ui
+from MainWindow import Ui_MainWindow
 from PyQt6.QtWidgets import QApplication, QMainWindow
 import os
 
 
-class MainWindow(QMainWindow, main_window_ui):
+class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle('Maps API')
         self.setFixedSize(800, 645)
 
+        # тема по умолчанию
+        self.theme = 'light'
+
+        # процесс получения и вывода картинки на экран при нажатии кнопки
         self.searchButton.clicked.connect(self.search)
 
         # создание горячих клавиш
@@ -34,8 +38,11 @@ class MainWindow(QMainWindow, main_window_ui):
         self.right = QShortcut(QKeySequence('Right'), self)
         self.right.activated.connect(lambda: self.movement('right'))
 
+        # изменение темы, если изменился статус QCheckBox
+        self.themeCheckBox.stateChanged.connect(self.change_theme)
+
     def search(self):
-        '''Поиск и вывод объекта по введенным данным'''
+        """Поиск и вывод объекта по введенным данным"""
         lon = self.lonEdit.text()
         lat = self.latEdit.text()
         delta = self.deltaEdit.text()
@@ -44,16 +51,17 @@ class MainWindow(QMainWindow, main_window_ui):
             self.statusbar.clearMessage()
             self.get_image(lon, lat, delta)
             self.pixmap = QPixmap(self.map_file)
-            self.MapLabel.setPixmap(self.pixmap)
+            self.MapLabel.setPixmap(self.pixmap)  # вывод картинки на экран
         else:
             self.statusbar.showMessage('Введены некорректные данные')
 
     def get_image(self, lon, lat, delta):
-        '''Создание и выполнение запроса для получения карты'''
+        """Создание и выполнение запроса для получения карты"""
         params = {
             'apikey': STATIC_API_KEY,
             'll': f'{lon},{lat}',
-            'spn': f'{delta},{delta}'
+            'spn': f'{delta},{delta}',
+            'theme': self.theme
         }
         # запрос на получение картинки по введенным данным
         response = requests.get(STATIC_API_SERVER, params)
@@ -68,7 +76,7 @@ class MainWindow(QMainWindow, main_window_ui):
             sys.exit(1)
 
     def zoom(self, fg):
-        '''Изменение масштаба карты при использовании горячих клавиш'''
+        """Изменение масштаба карты при использовании горячих клавиш"""
         cur_delta = float(self.deltaEdit.text())
         step = 0.5  # шаг изменения масштаба
         if fg:
@@ -80,7 +88,7 @@ class MainWindow(QMainWindow, main_window_ui):
         self.search()
 
     def movement(self, direction):
-        '''Изменение положения карты при нажатии на клавиши стрелок'''
+        """Изменение положения карты при нажатии на клавиши стрелок"""
         lon = float(self.lonEdit.text())
         lat = float(self.latEdit.text())
         delta = float(self.deltaEdit.text())
@@ -107,6 +115,13 @@ class MainWindow(QMainWindow, main_window_ui):
         self.lonEdit.setText(str(lon))
         self.search()
 
+    def change_theme(self):
+        """Функция для изменения темы карты"""
+        if self.themeCheckBox.isChecked():  # если True, то тема сменяется на черную
+            self.theme = 'dark'
+        else:
+            self.theme = 'light'
+
     def closeEvent(self, event):
         os.remove(self.map_file)  # удаления сохранившейся карты с компьютера при завершении работы программы
 
@@ -120,7 +135,7 @@ def main():
 
 
 def get_api_key():
-    '''Получение API ключей из файла api_data.csv'''
+    """Получение API ключей из файла api_data.csv"""
     with open('api_data.csv', mode='r',
               encoding='utf-8') as file:  # необходимо создать файл api_data.csv с 1-ой строкой: geocode_api_key;static_api_key
         data = file.readlines()[1].split(';')
