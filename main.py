@@ -4,6 +4,7 @@ from PyQt6.QtGui import QPixmap, QKeySequence, QShortcut
 from MainWindow import Ui_MainWindow
 from PyQt6.QtWidgets import QApplication, QMainWindow
 import os
+from functools import partial
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -16,8 +17,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # тема по умолчанию
         self.theme = 'light'
 
+        self.searchObjButton.clicked.connect(partial(self.search, 'name'))
         # процесс получения и вывода картинки на экран при нажатии кнопки
-        self.searchButton.clicked.connect(self.search)
+        self.searchButton.clicked.connect(partial(self.search, 'coords', first=True))
 
         # создание горячих клавиш
         self.zoom_plus_shortcut = QShortcut(QKeySequence('PgUp'), self)
@@ -41,28 +43,75 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # изменение темы, если изменился статус QCheckBox
         self.themeCheckBox.stateChanged.connect(self.change_theme)
 
-    def search(self):
+    def search(self, button, pt=False, first=False):
         """Поиск и вывод объекта по введенным данным"""
         lon = self.lonEdit.text()
         lat = self.latEdit.text()
         delta = self.deltaEdit.text()
-        if delta.strip() and lon.strip() and lat.strip() and 0.01 <= float(
+        name = self.nameEdit.text()
+        if button == 'name':
+            lon_pt, lat_pt = self.get_by_object_name(name).split()
+            lon, lat = self.get_by_object_name(name).split()
+            self.latEdit.setText(str(lat))
+            self.lonEdit.setText(str(lon))
+            self.deltaEdit.setText('1.5')
+            self.pt = True
+            self.statusbar.clearMessage()
+            self.get_image(lon, lat, 1.5, self.pt, lon_pt, lat_pt)
+            self.pixmap = QPixmap(self.map_file)
+            self.MapLabel.setPixmap(self.pixmap)  # вывод картинки на экран
+        elif button == 'coords' and first and delta.strip() and lon.strip() and lat.strip() and 0.01 <= float(
                 delta) <= 3 and -180 < float(lon) < 180 and -85 < float(lat) < 85:  # проверка введенных данных
             self.statusbar.clearMessage()
+            self.pt = False
             self.get_image(lon, lat, delta)
+            self.pixmap = QPixmap(self.map_file)
+            self.MapLabel.setPixmap(self.pixmap)  # вывод картинки на экран
+        elif button == 'coords' and not first:
+            self.statusbar.clearMessage()
+            if name:
+                lon_pt, lat_pt = self.get_by_object_name(name).split()
+            else:
+                lon_pt, lat_pt = 0, 0
+            self.get_image(lon, lat, delta, self.pt, lon_pt, lat_pt)
             self.pixmap = QPixmap(self.map_file)
             self.MapLabel.setPixmap(self.pixmap)  # вывод картинки на экран
         else:
             self.statusbar.showMessage('Введены некорректные данные')
 
-    def get_image(self, lon, lat, delta):
-        """Создание и выполнение запроса для получения карты"""
+    def get_by_object_name(self, name):
         params = {
-            'apikey': STATIC_API_KEY,
-            'll': f'{lon},{lat}',
-            'spn': f'{delta},{delta}',
-            'theme': self.theme
+            'apikey': GEOCODE_API_KEY,
+            'geocode': name,
+            'format': 'json',
         }
+        response = requests.get(GEOCODE_API_SERVER, params)
+        if response:
+            json_response = response.json()
+            toponym = json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
+            toponym_coodrinates = toponym["Point"]["pos"]
+            return toponym_coodrinates
+        else:  # обработка ошибки при попытке выполнения запроса
+            print(f'Ошибка: {response.status_code}')
+            sys.exit(1)
+
+    def get_image(self, lon, lat, delta, pt=False, lon_pt=0, lat_pt=0):
+        """Создание и выполнение запроса для получения карты"""
+        if pt:
+            params = {
+                'apikey': STATIC_API_KEY,
+                'll': f'{lon},{lat}',
+                'spn': f'{delta},{delta}',
+                'pt': f'{lon_pt},{lat_pt},pm2rdl',
+                'theme': self.theme
+            }
+        else:
+            params = {
+                'apikey': STATIC_API_KEY,
+                'll': f'{lon},{lat}',
+                'spn': f'{delta},{delta}',
+                'theme': self.theme
+            }
         # запрос на получение картинки по введенным данным
         response = requests.get(STATIC_API_SERVER, params)
 
@@ -85,7 +134,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
             if cur_delta + step <= 3:
                 self.deltaEdit.setText(f'{round(cur_delta + step, 2)}')
-        self.search()
+        self.search('coords')
 
     def movement(self, direction):
         """Изменение положения карты при нажатии на клавиши стрелок"""
@@ -113,7 +162,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 lon -= step
         self.latEdit.setText(str(lat))
         self.lonEdit.setText(str(lon))
-        self.search()
+        self.search('coords')
 
     def change_theme(self):
         """Функция для изменения темы карты"""
