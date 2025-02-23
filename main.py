@@ -18,6 +18,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.theme = 'light'
 
         self.searchObjButton.clicked.connect(partial(self.search, 'name'))
+        self.resetButton.clicked.connect(self.reset)
         # процесс получения и вывода картинки на экран при нажатии кнопки
         self.searchButton.clicked.connect(partial(self.search, 'coords', first=True))
 
@@ -49,7 +50,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         lat = self.latEdit.text()
         delta = self.deltaEdit.text()
         name = self.nameEdit.text()
-        if button == 'name':
+        if button == 'name' and not name or button == 'coords' and not lon:
+            self.statusbar.showMessage('Пустые данные')
+        elif button == 'name':
             lon_pt, lat_pt = self.get_by_object_name(name).split()
             lon, lat = self.get_by_object_name(name).split()
             self.latEdit.setText(str(lat))
@@ -163,6 +166,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.latEdit.setText(str(lat))
         self.lonEdit.setText(str(lon))
         self.search('coords')
+
+    def reset(self):
+        self.nameEdit.clear()
+        self.deltaEdit.clear()
+        self.lonEdit.clear()
+        self.latEdit.clear()
+        self.MapLabel.clear()
 
     def change_theme(self):
         """Функция для изменения темы карты"""

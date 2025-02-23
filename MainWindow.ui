@@ -100,7 +100,7 @@
      <rect>
       <x>10</x>
       <y>50</y>
-      <width>381</width>
+      <width>571</width>
       <height>51</height>
      </rect>
     </property>
@@ -119,6 +119,13 @@
       <widget class="QPushButton" name="searchObjButton">
        <property name="text">
         <string>Искать объект</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="resetButton">
+       <property name="text">
+        <string>Сброс результата</string>
        </property>
       </widget>
      </item>
