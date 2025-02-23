@@ -14,6 +14,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setWindowTitle('Maps API')
         self.setFixedSize(800, 645)
 
+        self.adressEdit.setReadOnly(True)
+
         # тема по умолчанию
         self.theme = 'light'
 
@@ -53,10 +55,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if button == 'name' and not name or button == 'coords' and not lon:
             self.statusbar.showMessage('Пустые данные')
         elif button == 'name':
-            lon_pt, lat_pt = self.get_by_object_name(name).split()
-            lon, lat = self.get_by_object_name(name).split()
+            lon_pt, lat_pt = self.get_by_object_name(name)[0].split()
+            lon, lat = self.get_by_object_name(name)[0].split()
+            adress = self.get_by_object_name(name)[1]
             self.latEdit.setText(str(lat))
             self.lonEdit.setText(str(lon))
+            self.adressEdit.setText(str(adress))
             self.deltaEdit.setText('1.5')
             self.pt = True
             self.statusbar.clearMessage()
@@ -73,7 +77,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         elif button == 'coords' and not first:
             self.statusbar.clearMessage()
             if name:
-                lon_pt, lat_pt = self.get_by_object_name(name).split()
+                lon_pt, lat_pt = self.get_by_object_name(name)[0].split()
             else:
                 lon_pt, lat_pt = 0, 0
             self.get_image(lon, lat, delta, self.pt, lon_pt, lat_pt)
@@ -92,8 +96,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if response:
             json_response = response.json()
             toponym = json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
+            toponym_address = toponym["metaDataProperty"]["GeocoderMetaData"]["text"]
             toponym_coodrinates = toponym["Point"]["pos"]
-            return toponym_coodrinates
+            return toponym_coodrinates, toponym_address
         else:  # обработка ошибки при попытке выполнения запроса
             print(f'Ошибка: {response.status_code}')
             sys.exit(1)
@@ -173,6 +178,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.lonEdit.clear()
         self.latEdit.clear()
         self.MapLabel.clear()
+        self.adressEdit.clear()
 
     def change_theme(self):
         """Функция для изменения темы карты"""
